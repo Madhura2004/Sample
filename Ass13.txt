@@ -1,0 +1,122 @@
+Ternimal 1
+nc -lk 9999
+
+Terminal 2
+
+spark-shell
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+
+object WordCounting{
+    def main(args: Array[String]): Unit = {
+
+    val spark = SparkSession.builder
+    .appName("StructuredNetworkWordCount")
+    .master("local[*]")
+    .getOrCreate()
+
+    spark.sparkContext.setLogLevel("ERROR")
+
+    val lines = spark.readStream
+    .format("socket")
+    .option("host", "localhost")
+    .option("port", 9999)
+    .load()
+
+    import spark.implicits._
+
+    val words = lines.as[String].flatMap(_.split(" "))
+    val wordcounts = words.groupBy("value").count()
+
+    val query = wordcounts.writeStream
+    .outputMode("complete")
+    .format("console")
+    .start()
+
+    query.awaitTermination()
+
+    }
+}
+
+WordCounting.main(Array())
+
+
+
+
+-------------------------------------------------
+run code in spark shell to resolve dependency issue
+
+
+Netcat (nc) is a command-line networking tool used for reading from and writing to network connections using TCP or UDP. It’s often called the Swiss Army knife of networking because it can:
+
+✅ Open TCP/UDP connections
+✅ Act as a server or client
+✅ Send and receive data over a network
+✅ Perform port scanning
+✅ Transfer files
+
+nc -lk 9999
+
+-l → Listen for incoming connections
+
+-k → Keep listening after a connection is closed
+
+9999 → Port number
+
+------------------------------------------------
+root@sel-a1-216-04:/home/te# spark-shell
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+25/03/29 09:46:56 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Spark context Web UI available at http://sel-a1-216-04:4040
+Spark context available as 'sc' (master = local[*], app id = local-1743221817267).
+Spark session available as 'spark'.
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /___/ .__/\_,_/_/ /_/\_\   version 3.5.5
+      /_/
+         
+Using Scala version 2.12.18 (OpenJDK 64-Bit Server VM, Java 11.0.26)
+Type in expressions to have them evaluated.
+Type :help for more information.
+
+scala> import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.SparkSession
+
+scala> import org.apache.spark.sql.functions._
+import org.apache.spark.sql.functions._
+
+scala> 
+
+scala> object WordCountStreaming {
+     |   def main(args: Array[String]): Unit = {
+     |     val spark = SparkSession.builder
+     |       .appName("StructuredNetworkWordCount")
+     |       .master("local[*]")
+     |       .getOrCreate()
+     | 
+     |     val lines = spark.readStream
+     |       .format("socket")
+     |       .option("host", "localhost")
+     |       .option("port", 9999)
+     |       .load()
+     | 
+     |     import spark.implicits._
+     |     val words = lines.as[String].flatMap(_.split(" "))
+     | 
+     |     val wordCounts = words.groupBy("value").count()
+     | 
+     |     val query = wordCounts.writeStream
+     |       .outputMode("complete")
+     |       .format("console")
+     |       .start()
+     | 
+     |     query.awaitTermination()
+     |   }
+     | }
+defined object WordCountStreaming
+
+scala> WordCountStreaming.main(Array())
